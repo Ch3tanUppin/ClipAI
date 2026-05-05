@@ -1,0 +1,65 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+spring:
+  application:
+    name: clipai-api
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/clipAI}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:Chetan.123}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: clipai-video-workers
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.clipai.api.processing
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    listener:
+      ack-mode: record
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+app:
+  frontend-origin: ${FRONTEND_ORIGIN:http://localhost:3000}
+  public-api-base-url: ${PUBLIC_API_BASE_URL:http://localhost:8080/api}
+  jwt:
+    secret: ${JWT_SECRET:change-this-development-secret-change-this-development-secret}
+    issuer: ${JWT_ISSUER:clipai}
+    ttl-minutes: ${JWT_TTL_MINUTES:10080}
+  aws:
+    region: ${AWS_REGION:ap-south-1}
+    bucket: ${AWS_S3_BUCKET:clipai-videos}
+    cdn-base-url: ${CDN_BASE_URL:https://cdn.example.com}
+    enabled: ${AWS_ENABLED:false}
+  razorpay:
+    key-id: ${RAZORPAY_KEY_ID:}
+    key-secret: ${RAZORPAY_KEY_SECRET:}
+    webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:}
+  video:
+    processing-topic: video-processing-jobs
+    local-processing: ${LOCAL_VIDEO_PROCESSING:true}
+  local:
+    upload-dir: ${LOCAL_UPLOAD_DIR:./local-uploads}
+    mock-payments: ${MOCK_PAYMENTS:true}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
