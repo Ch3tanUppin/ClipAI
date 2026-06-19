@@ -47,6 +47,15 @@ public class SecurityConfig {
     }
 
     @Bean
+    public org.springframework.boot.web.servlet.FilterRegistrationBean<GlobalCorsFilter> corsFilterRegistrationBean(AppProperties properties) {
+        org.springframework.boot.web.servlet.FilterRegistrationBean<GlobalCorsFilter> registration = 
+            new org.springframework.boot.web.servlet.FilterRegistrationBean<>(new GlobalCorsFilter(properties));
+        registration.setDispatcherTypes(jakarta.servlet.DispatcherType.REQUEST, jakarta.servlet.DispatcherType.ASYNC, jakarta.servlet.DispatcherType.ERROR);
+        registration.setOrder(org.springframework.core.Ordered.HIGHEST_PRECEDENCE);
+        return registration;
+    }
+
+    @Bean
     PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(12);
     }
@@ -72,6 +81,7 @@ public class SecurityConfig {
     }
 
     static class JwtAuthFilter extends OncePerRequestFilter {
+        private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(JwtAuthFilter.class);
         private final JwtService jwtService;
         private final UserRepository users;
 
@@ -83,6 +93,10 @@ public class SecurityConfig {
         @Override
         protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
                 throws ServletException, IOException {
+            if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+                chain.doFilter(request, response);
+                return;
+            }
             String header = request.getHeader(HttpHeaders.AUTHORIZATION);
             if (header != null && header.startsWith("Bearer ")) {
                 try {
@@ -95,9 +109,12 @@ public class SecurityConfig {
                                 List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())));
                         SecurityContextHolder.getContext().setAuthentication(auth);
                     });
-                } catch (RuntimeException ignored) {
+                } catch (RuntimeException ex) {
+                    log.warn("[JWT Auth] Token validation failed for {}: {}", request.getRequestURI(), ex.getMessage());
                     SecurityContextHolder.clearContext();
                 }
+            } else {
+                log.debug("[JWT Auth] No Bearer token on authenticated endpoint: {} {}", request.getMethod(), request.getRequestURI());
             }
             chain.doFilter(request, response);
         }

@@ -32,7 +32,7 @@ public class LocalStorageController {
         this.root = Path.of(properties.local().uploadDir()).toAbsolutePath().normalize();
     }
 
-    @PutMapping("/local-uploads/{encodedKey}")
+    @PutMapping("/local-uploads/{*encodedKey}")
     @CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void upload(@PathVariable String encodedKey, HttpServletRequest request) throws IOException {
@@ -41,7 +41,7 @@ public class LocalStorageController {
         Files.copy(request.getInputStream(), target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
     }
 
-    @GetMapping("/local-uploads/{encodedKey}")
+    @GetMapping("/local-uploads/{*encodedKey}")
     @CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
     ResponseEntity<Resource> download(@PathVariable String encodedKey) throws IOException {
         Path target = resolve(encodedKey);
@@ -56,7 +56,7 @@ public class LocalStorageController {
                 .body(resource);
     }
 
-    @GetMapping("/local-assets/{encodedKey}")
+    @GetMapping("/local-assets/{*encodedKey}")
     @CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
     ResponseEntity<Resource> asset(@PathVariable String encodedKey) throws IOException {
         Path target = resolve(encodedKey);
@@ -73,6 +73,9 @@ public class LocalStorageController {
 
     private Path resolve(String encodedKey) {
         String key = URLDecoder.decode(encodedKey, StandardCharsets.UTF_8);
+        if (key.startsWith("/")) {
+            key = key.substring(1);
+        }
         Path target = root.resolve(key).normalize();
         if (!target.startsWith(root)) {
             throw new IllegalArgumentException("Invalid local storage key");
